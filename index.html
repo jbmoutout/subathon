@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>zawathon — combien pour tenir ?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --text:#f2f2ef;
+    --muted:#8c8c92;
+    --dim:#5a5a60;
+    --line:#1d1d20;
+    --up:#2fd47a;
+    --past:#6f8bd8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:"Schibsted Grotesk",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;justify-content:center;
+  }
+  main{width:100%;max-width:860px;padding:clamp(22px,5vw,48px);
+    display:flex;flex-direction:column;min-height:100vh}
+
+  header{display:flex;justify-content:space-between;align-items:center}
+  .wordmark{font-weight:700;font-size:clamp(1.1rem,3vw,1.35rem);letter-spacing:-.01em}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted);font-weight:500}
+  .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+  .badge.live{color:var(--text)} .badge.live .dot{background:var(--up);animation:pulse 1.5s steps(1) infinite}
+  @keyframes pulse{50%{opacity:.25}}
+
+  /* ---- skeleton ---- */
+  .skel{display:inline-block;border-radius:8px;vertical-align:middle;
+    background:linear-gradient(90deg,#141418 25%,#212129 37%,#141418 63%);
+    background-size:400% 100%;animation:sh 1.5s ease infinite}
+  @keyframes sh{0%{background-position:100% 0}100%{background-position:-120% 0}}
+  .skel-big{width:min(72vw,7.5em);height:.86em;border-radius:12px}
+  .skel-sm{width:min(64vw,14em);height:.62em;margin-top:.2em}
+
+  /* ---- héros ---- */
+  .hero{margin-top:clamp(28px,7vh,76px)}
+  .kicker{font-weight:600;font-size:clamp(.74rem,2.1vw,.9rem);text-transform:uppercase;
+    letter-spacing:.16em;margin:0 0 .5em;color:var(--muted);transition:color .2s}
+  .kicker.future{color:var(--up)} .kicker.past{color:var(--past)}
+  .big{margin:0;font-weight:900;line-height:.95;letter-spacing:-.025em;white-space:nowrap;
+    font-size:clamp(2.4rem,9vw,4.6rem)}
+  .readout{margin:.55em 0 0;font-weight:500;white-space:nowrap;
+    font-size:clamp(1.05rem,3vw,1.5rem);color:var(--muted);min-height:1.4em}
+  .readout b{font-weight:800}
+  .readout .acc{color:var(--up);font-weight:900}
+  .readout .pst{color:var(--past);font-weight:800}
+
+  /* ---- curseur ---- */
+  .slider{margin-top:clamp(38px,8vw,64px);position:relative}
+  .pivotlab{position:absolute;top:-24px;left:var(--pivot,32%);transform:translateX(-50%);
+    white-space:nowrap;color:var(--text);font-size:.7rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;pointer-events:none;transition:opacity .2s}
+  .rail{position:relative;height:28px;display:flex;align-items:center}
+  .rail input[type=range]{position:absolute;inset:0;width:100%;height:28px;margin:0;
+    -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;z-index:2}
+  .rail input::-webkit-slider-runnable-track{height:8px;border-radius:4px;
+    background:linear-gradient(90deg, rgba(111,139,216,.40) 0 var(--pivot,32%), var(--line) var(--pivot,32%) 100%)}
+  .rail input::-moz-range-track{height:8px;border-radius:4px;
+    background:linear-gradient(90deg, rgba(111,139,216,.40) 0 var(--pivot,32%), var(--line) var(--pivot,32%) 100%)}
+  .rail input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;background:transparent;border:0}
+  .rail input::-moz-range-thumb{width:28px;height:28px;background:transparent;border:0}
+  .pivtick{position:absolute;left:var(--pivot,32%);top:-7px;bottom:-7px;width:2px;
+    background:var(--text);opacity:.5;transform:translateX(-1px);pointer-events:none;z-index:3}
+  .knob{position:absolute;top:50%;left:var(--knob,32%);width:26px;height:26px;border-radius:50%;
+    background:var(--up);transform:translate(-50%,-50%);pointer-events:none;z-index:3;
+    box-shadow:0 0 0 5px rgba(47,212,122,.16),0 2px 10px rgba(0,0,0,.55)}
+  .scale{display:flex;justify-content:space-between;margin-top:12px;color:var(--dim);font-size:.76rem}
+  .scale .sp{color:var(--past)} .scale .sf{color:var(--up)}
+
+  /* loading: rail shimmer, hide functional bits */
+  .rail.loading::before{content:"";position:absolute;left:0;right:0;top:10px;height:8px;border-radius:4px;
+    background:linear-gradient(90deg,#141418 25%,#212129 37%,#141418 63%);background-size:400% 100%;animation:sh 1.5s ease infinite}
+  .rail.loading input,.rail.loading .knob,.rail.loading .pivtick{visibility:hidden}
+  body.loading .pivotlab{opacity:0}
+
+  .spacer{flex:1;min-height:18px}
+  .note{color:var(--dim);font-size:.78rem;line-height:1.5}
+
+  footer{margin-top:clamp(18px,3vw,28px);padding-top:14px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:.74rem}
+  footer .on{color:var(--muted)} footer a{color:var(--dim);text-decoration:none}
+
+  @media (prefers-reduced-motion:reduce){.badge.live .dot,.skel,.rail.loading::before{animation:none}}
+</style>
+</head>
+<body class="loading">
+  <main>
+    <header>
+      <span class="wordmark">zawathon</span>
+      <span class="badge" id="badge"><span class="dot"></span><span id="statusTxt">connexion…</span></span>
+    </header>
+
+    <section class="hero">
+      <p class="kicker" id="kicker">chargement…</p>
+      <h1 class="big" id="big"><span class="skel skel-big"></span></h1>
+      <p class="readout" id="readout"><span class="skel skel-sm"></span></p>
+    </section>
+
+    <section class="slider">
+      <span class="pivotlab" id="pivotlab">fin actuelle</span>
+      <div class="rail loading" id="rail">
+        <input type="range" id="slider" min="0" max="1000" value="320" step="1" disabled aria-label="date cible" />
+        <div class="pivtick"></div>
+        <div class="knob" id="knob"></div>
+      </div>
+      <div class="scale"><span class="sp" id="sMin">·</span><span class="sf" id="sMax">·</span></div>
+    </section>
+
+    <div class="spacer"></div>
+
+    <p class="note">glisse le curseur — à gauche : quand chaque date a été verrouillée · à droite : ce qu'il faut pour l'atteindre. <span id="ruleNote">1 sub +1 min 30 · 1 tip 5 € +2 min</span>.</p>
+
+    <footer>
+      <span id="footL">connexion…</span>
+      <a href="https://twitch.tv/zawa_prod" target="_blank" rel="noopener">twitch.tv/zawa_prod ↗</a>
+    </footer>
+  </main>
+
+<script>
+/* ============================================================
+   CONFIG — flux live, servi via serve.py (même origine).
+   ============================================================ */
+const SAME_ORIGIN = location.protocol.startsWith("http");
+const BASE     = SAME_ORIGIN ? "" : "https://zawathon.ascentcloud.art";
+const FEED_URL   = BASE + "/api/data";
+const EVENTS_URL = BASE + "/api/events";
+const REFRESH_MS = 30000;
+const HORIZON = 21*86400;
+const PIVOT   = 0.32;
+const THUMB   = 26;
+/* secondes ajoutées par don — défauts (règle annoncée), ré-estimés en live depuis /api/events */
+const RATE = { sub:90, tip:120 };
+const TIP_EUR = 5;   // l'API n'expose que le palier tipeee 5 € (champ tipeee_5) — le montant n'est pas dérivable
+
+function adapt(raw){
+  const s = raw.stats || {}, ser = raw.series || [];
+  return {
+    now:        num(s.now),
+    floorEpoch: num(s.floor_eta_epoch),
+    series:     ser.map(p=>({t:num(p.t), timer:num(p.timer)}))
+                   .filter(p=>p.t!=null && p.timer!=null).sort((a,b)=>a.t-b.t),
+  };
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const num = x => (x==null || x==="" || isNaN(x)) ? null : Number(x);
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const frNum = n => Math.round(n).toLocaleString("fr-FR");
+const fmtDay = e => cap(new Date(e*1000).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}));
+const fmtDT  = e => fmtDay(e) + " · " + new Date(e*1000).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}).replace(":","h");
+function ago(t, now){
+  let s=Math.max(0, now-t);
+  if(s<3600) return "il y a "+Math.round(s/60)+" min";
+  if(s<86400) return "il y a "+Math.round(s/3600)+" h";
+  return "il y a "+Math.round(s/86400)+" j";
+}
+function reachedAt(series, D){
+  for(const p of series){ if(p.t + p.timer >= D) return p.t; }
+  return series.length ? series[series.length-1].t : null;
+}
+/* règle vivante : secondes/sub déduites des tranches "pur sub" de /api/events (idem tipeee si isolable) */
+function median(a){ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y); const m=s.length>>1; return s.length%2 ? s[m] : (s[m-1]+s[m])/2; }
+function deriveRates(evs){
+  const sub=[], tip=[];
+  for(const b of (evs||[])){
+    const ns=+b.sub||0, nt=+b.tipeee_5||0, nu=+b.unknown||0, add=+b.added_seconds||0;
+    if(add<=0) continue;
+    if(ns>0 && nt===0 && nu===0) sub.push(add/ns);
+    if(nt>0 && ns===0 && nu===0) tip.push(add/nt);
+  }
+  return { sub:median(sub), tip:median(tip) };
+}
+function fmtRule(sec){ sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60; return s ? `${m} min ${String(s).padStart(2,"0")}` : `${m} min`; }
+function updateNote(){ const el=$("ruleNote"); if(el) el.textContent = `1 sub +${fmtRule(RATE.sub)} · 1 tip ${TIP_EUR} € +${fmtRule(RATE.tip)}`; }
+/* centre réel du pouce (encadré par sa largeur) pour une fraction 0..1 */
+function posPct(frac){
+  const W = $("slider").clientWidth || 1;
+  return ((THUMB/2) + frac*(W-THUMB)) / W * 100;
+}
+/* auto-ajuste la taille pour rester sur UNE ligne */
+function fitOne(el, max, min){
+  if(!el) return;
+  let s=max; el.style.fontSize=s+"px";
+  let g=0; while(el.scrollWidth>el.clientWidth+0.5 && s>min && g++<240){ s-=1; el.style.fontSize=s+"px"; }
+}
+function fitAll(){ fitOne($("big"),74,22); fitOne($("readout"),28,13); }
+
+/* ---------- état ---------- */
+let ST = { now:null, floor:null, series:[] };
+let snap = null;
+let userMoved = false, loaded = false;
+
+const valToDate = x => !snap ? null
+  : (x <= PIVOT ? snap.min + (x/PIVOT)*(snap.floor-snap.min)
+               : snap.floor + ((x-PIVOT)/(1-PIVOT))*(snap.max-snap.floor));
+
+function setPivot(){ document.documentElement.style.setProperty("--pivot", posPct(PIVOT).toFixed(2)+"%"); }
+function setKnob(){ $("knob").style.left = posPct((+$("slider").value)/1000).toFixed(2)+"%"; }
+
+function updateReadout(){
+  if(!snap) return;
+  const v = valToDate((+$("slider").value)/1000);
+  $("big").textContent = fmtDT(v);
+  const eps = 2*3600, k = $("kicker"), r = $("readout");
+  if(v > snap.floor + eps){
+    const need = v - snap.floor;
+    k.textContent = "pour tenir jusqu'au"; k.className = "kicker future";
+    r.innerHTML = `<span class="acc">+${frNum(Math.ceil(need/RATE.sub))}</span> subs · ou ${frNum(Math.ceil(need/RATE.tip))} tips ${TIP_EUR} €`;
+  } else if(v < snap.floor - eps){
+    const rch = reachedAt(ST.series, v);
+    k.textContent = "déjà verrouillé"; k.className = "kicker past";
+    r.innerHTML = rch!=null ? `<span class="pst">verrouillé le ${fmtDT(rch)}</span> · ${ago(rch, ST.now)}` : `déjà atteint`;
+  } else {
+    k.textContent = "fin garantie, là"; k.className = "kicker";
+    r.innerHTML = `sans aucun nouveau don — <b>ça ne peut pas finir avant</b>`;
+  }
+  fitAll();
+}
+
+function render(d){
+  if(d.floorEpoch==null) return;
+  ST.now = d.now; ST.floor = d.floorEpoch; ST.series = d.series;
+
+  if(!userMoved){
+    const fs = d.series.length ? (d.series[0].t + d.series[0].timer) : d.floorEpoch;
+    snap = { min: Math.min(fs, d.floorEpoch - 3600), floor: d.floorEpoch, max: d.floorEpoch + HORIZON };
+    const sl = $("slider"); sl.disabled = false; sl.value = Math.round(PIVOT*1000);
+    $("pivotlab").textContent = "fin actuelle · " + fmtDay(d.floorEpoch);
+    $("sMin").textContent = fmtDay(snap.min);
+    $("sMax").textContent = fmtDay(snap.max);
+  }
+  if(!loaded){ loaded = true; document.body.classList.remove("loading"); $("rail").classList.remove("loading"); }
+  updateNote(); setPivot(); setKnob(); updateReadout();
+}
+
+$("slider").addEventListener("input", ()=>{ userMoved = true; setKnob(); updateReadout(); });
+window.addEventListener("resize", ()=>{ if(loaded){ setPivot(); setKnob(); fitAll(); } });
+
+async function refresh(){
+  try{
+    const [dr, er] = await Promise.allSettled([
+      fetch(FEED_URL,   {cache:"no-store"}),
+      fetch(EVENTS_URL, {cache:"no-store"}),
+    ]);
+    if(dr.status!=="fulfilled" || !dr.value.ok) throw new Error("data");
+    // règle vivante : on ré-estime sub (et tip si isolable) avant le rendu
+    if(er.status==="fulfilled" && er.value.ok){
+      try{ const rr = deriveRates((await er.value.json()).events);
+        if(rr.sub) RATE.sub = Math.round(rr.sub);
+        if(rr.tip) RATE.tip = Math.round(rr.tip);
+      }catch(_){}
+    }
+    render(adapt(await dr.value.json()));
+    setStatus(true);
+  }catch(e){ setStatus(false); }
+}
+function setStatus(ok){
+  $("badge").className = "badge "+(ok?"live":"");
+  // Keep "en diret"
+  $("statusTxt").textContent = ok ? "en diret" : "hors ligne";
+  if(ok){ const t=new Date().toLocaleTimeString("fr-FR"); $("footL").innerHTML = `<span class="on">maj ${t}</span>`; }
+  else { $("footL").innerHTML = "hors ligne…"; if(!loaded) $("kicker").textContent = "hors ligne — nouvelle tentative…"; }
+}
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
