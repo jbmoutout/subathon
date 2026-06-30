@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>zawathon — combien pour tenir ?</title>
+<title>Zawathon — compteur en diret</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -50,8 +50,9 @@
   .kicker.future{color:var(--up)} .kicker.past{color:var(--past)}
   .big{margin:0;font-weight:900;line-height:.95;letter-spacing:-.025em;white-space:nowrap;
     font-size:clamp(2.4rem,9vw,4.6rem)}
-  .readout{margin:.55em 0 0;font-weight:500;white-space:nowrap;
-    font-size:clamp(1.05rem,3vw,1.5rem);color:var(--muted);min-height:1.4em}
+  .readout{margin:.9rem 0 0;font-weight:500;white-space:nowrap;
+    font-size:clamp(1.05rem,3vw,1.5rem);color:var(--muted);
+    min-height:2.4rem;line-height:2.4rem}
   .readout b{font-weight:800}
   .readout .acc{color:var(--up);font-weight:900}
   .readout .pst{color:var(--past);font-weight:800}
@@ -59,7 +60,7 @@
   /* ---- curseur ---- */
   .slider{margin-top:clamp(38px,8vw,64px);position:relative}
   .pivotlab{position:absolute;top:-24px;left:var(--pivot,32%);transform:translateX(-50%);
-    white-space:nowrap;color:var(--text);font-size:.7rem;font-weight:700;text-transform:uppercase;
+    white-space:nowrap;color:var(--text);font-size:.7rem;font-weight:700;
     letter-spacing:.06em;pointer-events:none;transition:opacity .2s}
   .rail{position:relative;height:28px;display:flex;align-items:center}
   .rail input[type=range]{position:absolute;inset:0;width:100%;height:28px;margin:0;
@@ -77,6 +78,8 @@
     box-shadow:0 0 0 5px rgba(47,212,122,.16),0 2px 10px rgba(0,0,0,.55)}
   .scale{display:flex;justify-content:space-between;margin-top:12px;color:var(--dim);font-size:.76rem}
   .scale .sp{color:var(--past)} .scale .sf{color:var(--up)}
+
+  .since{color:var(--muted);font-weight:500}
 
   /* loading: rail shimmer, hide functional bits */
   .rail.loading::before{content:"";position:absolute;left:0;right:0;top:10px;height:8px;border-radius:4px;
@@ -98,7 +101,7 @@
   <main>
     <header>
       <span class="wordmark">zawathon</span>
-      <span class="badge" id="badge"><span class="dot"></span><span id="statusTxt">connexion…</span></span>
+      <span class="badge" id="badge"><span class="dot"></span><span id="statusTxt">connexion…</span><span class="since" id="since"></span></span>
     </header>
 
     <section class="hero">
@@ -108,7 +111,7 @@
     </section>
 
     <section class="slider">
-      <span class="pivotlab" id="pivotlab">fin actuelle</span>
+      <span class="pivotlab" id="pivotlab">Fin actuelle</span>
       <div class="rail loading" id="rail">
         <input type="range" id="slider" min="0" max="1000" value="320" step="1" disabled aria-label="date cible" />
         <div class="pivtick"></div>
@@ -119,7 +122,7 @@
 
     <div class="spacer"></div>
 
-    <p class="note">glisse le curseur — à gauche : quand chaque date a été verrouillée · à droite : ce qu'il faut pour l'atteindre. <span id="ruleNote">1 sub +1 min 30 · 1 tip 5 € +2 min</span>.</p>
+    <p class="note">Glissez le curseur. À gauche : quand chaque date a déjà été atteinte. À droite : ce qu'il reste à faire pour y arriver. Barème : <span id="ruleNote">1 sub = +1 min 30 · 1 tip 5 € = +2 min</span>.</p>
 
     <footer>
       <span id="footL">connexion…</span>
@@ -160,6 +163,20 @@ const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
 const frNum = n => Math.round(n).toLocaleString("fr-FR");
 const fmtDay = e => cap(new Date(e*1000).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}));
 const fmtDT  = e => fmtDay(e) + " · " + new Date(e*1000).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}).replace(":","h");
+/* heures écoulées depuis le début du subathon */
+function subathonHours(){
+  if(ST.start==null || ST.now==null) return null;
+  return Math.floor((ST.now - ST.start)/3600);
+}
+/* durée totale : du début à la fin garantie = heures écoulées + heures au compteur */
+function totalHours(){
+  if(ST.start==null || ST.floor==null) return null;
+  return Math.floor((ST.floor - ST.start)/3600);
+}
+function updateSince(){
+  const h = subathonHours();
+  $("since").textContent = h!=null ? `depuis ${h}h` : "";
+}
 function ago(t, now){
   let s=Math.max(0, now-t);
   if(s<3600) return "il y a "+Math.round(s/60)+" min";
@@ -182,8 +199,10 @@ function deriveRates(evs){
   }
   return { sub:median(sub), tip:median(tip) };
 }
-function fmtRule(sec){ sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60; return s ? `${m} min ${String(s).padStart(2,"0")}` : `${m} min`; }
-function updateNote(){ const el=$("ruleNote"); if(el) el.textContent = `1 sub +${fmtRule(RATE.sub)} · 1 tip ${TIP_EUR} € +${fmtRule(RATE.tip)}`; }
+function fmtRule(sec){ sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60;
+  if(m===0) return `${s}s`;
+  return s ? `${m} min ${String(s).padStart(2,"0")}` : `${m} min`; }
+function updateNote(){ const el=$("ruleNote"); if(el) el.textContent = `1 sub = +${fmtRule(RATE.sub)} · 1 tip ${TIP_EUR} € = +${fmtRule(RATE.tip)}`; }
 /* centre réel du pouce (encadré par sa largeur) pour une fraction 0..1 */
 function posPct(frac){
   const W = $("slider").clientWidth || 1;
@@ -198,7 +217,7 @@ function fitOne(el, max, min){
 function fitAll(){ fitOne($("big"),74,22); fitOne($("readout"),28,13); }
 
 /* ---------- état ---------- */
-let ST = { now:null, floor:null, series:[] };
+let ST = { now:null, floor:null, series:[], start:null };
 let snap = null;
 let userMoved = false, loaded = false;
 
@@ -216,15 +235,15 @@ function updateReadout(){
   const eps = 2*3600, k = $("kicker"), r = $("readout");
   if(v > snap.floor + eps){
     const need = v - snap.floor;
-    k.textContent = "pour tenir jusqu'au"; k.className = "kicker future";
-    r.innerHTML = `<span class="acc">+${frNum(Math.ceil(need/RATE.sub))}</span> subs · ou ${frNum(Math.ceil(need/RATE.tip))} tips ${TIP_EUR} €`;
+    k.textContent = "Pour atteindre le"; k.className = "kicker future";
+    r.innerHTML = `<span class="acc">+${frNum(Math.ceil(need/RATE.sub))}</span> subs ou ${frNum(Math.ceil(need/RATE.tip))} tips à ${TIP_EUR} €`;
   } else if(v < snap.floor - eps){
     const rch = reachedAt(ST.series, v);
-    k.textContent = "déjà verrouillé"; k.className = "kicker past";
-    r.innerHTML = rch!=null ? `<span class="pst">verrouillé le ${fmtDT(rch)}</span> · ${ago(rch, ST.now)}` : `déjà atteint`;
+    k.textContent = "Déjà atteint"; k.className = "kicker past";
+    r.innerHTML = rch!=null ? `<span class="pst">Atteint le ${fmtDT(rch)}</span> · ${ago(rch, ST.now)}` : `Déjà atteint`;
   } else {
-    k.textContent = "fin garantie, là"; k.className = "kicker";
-    r.innerHTML = `sans aucun nouveau don — <b>ça ne peut pas finir avant</b>`;
+    k.textContent = "Fin garantie"; k.className = "kicker";
+    r.innerHTML = `<b>Ça peut pas finir avant.</b>`;
   }
   fitAll();
 }
@@ -232,20 +251,31 @@ function updateReadout(){
 function render(d){
   if(d.floorEpoch==null) return;
   ST.now = d.now; ST.floor = d.floorEpoch; ST.series = d.series;
+  // début du subathon : l'API n'expose pas de date de départ, on ancre sur le 1er point brut
+  // de la série — gardé monotone (jamais plus tard) pour survivre à une fenêtre glissante.
+  if(d.series.length){ const s0 = d.series[0].t; ST.start = ST.start==null ? s0 : Math.min(ST.start, s0); }
 
   if(!userMoved){
     const fs = d.series.length ? (d.series[0].t + d.series[0].timer) : d.floorEpoch;
     snap = { min: Math.min(fs, d.floorEpoch - 3600), floor: d.floorEpoch, max: d.floorEpoch + HORIZON };
     const sl = $("slider"); sl.disabled = false; sl.value = Math.round(PIVOT*1000);
-    $("pivotlab").textContent = "fin actuelle · " + fmtDay(d.floorEpoch);
+    const tot = totalHours();
+    $("pivotlab").innerHTML = `${fmtDay(d.floorEpoch)}${tot!=null ? ` · ${tot}h de live` : ""}`;
     $("sMin").textContent = fmtDay(snap.min);
     $("sMax").textContent = fmtDay(snap.max);
   }
   if(!loaded){ loaded = true; document.body.classList.remove("loading"); $("rail").classList.remove("loading"); }
-  updateNote(); setPivot(); setKnob(); updateReadout();
+  updateNote(); setPivot(); setKnob(); updateReadout(); updateSince();
 }
 
-$("slider").addEventListener("input", ()=>{ userMoved = true; setKnob(); updateReadout(); });
+/* aimant : la poignée colle à la fin actuelle (le pivot) dans une petite zone morte */
+const SNAP = 18; // sur 1000
+$("slider").addEventListener("input", ()=>{
+  userMoved = true;
+  const sl = $("slider"), pv = Math.round(PIVOT*1000);
+  if(Math.abs(+sl.value - pv) <= SNAP) sl.value = pv;
+  setKnob(); updateReadout();
+});
 window.addEventListener("resize", ()=>{ if(loaded){ setPivot(); setKnob(); fitAll(); } });
 
 async function refresh(){
@@ -270,8 +300,9 @@ function setStatus(ok){
   $("badge").className = "badge "+(ok?"live":"");
   // Keep "en diret"
   $("statusTxt").textContent = ok ? "en diret" : "hors ligne";
-  if(ok){ const t=new Date().toLocaleTimeString("fr-FR"); $("footL").innerHTML = `<span class="on">maj ${t}</span>`; }
-  else { $("footL").innerHTML = "hors ligne…"; if(!loaded) $("kicker").textContent = "hors ligne — nouvelle tentative…"; }
+  if(ok){ const t=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}).replace(":","h");
+    $("footL").innerHTML = `<span class="on">Mis à jour ${t} (˶°ㅁ°)!!</span>`; }
+  else { $("since").textContent = ""; $("footL").innerHTML = "Hors ligne…"; if(!loaded) $("kicker").textContent = "Hors ligne — nouvelle tentative…"; }
 }
 refresh();
 setInterval(refresh, REFRESH_MS);
