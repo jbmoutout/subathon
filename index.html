@@ -238,7 +238,7 @@ function updateReadout(){
   if(v > snap.floor + eps){
     const need = v - snap.floor;
     k.textContent = "Pour atteindre le"; k.className = "kicker future";
-    r.innerHTML = `<span class="acc">+${frNum(Math.ceil(need/RATE.sub))}</span> subs ou ${frNum(Math.ceil(need/RATE.tip))} tips à ${TIP_EUR} €`;
+    r.innerHTML = `il manque <span class="acc">${frNum(Math.ceil(need/RATE.sub))}</span> subs ou ${frNum(Math.ceil(need/RATE.tip))} tips à ${TIP_EUR} €`;
   } else if(v < snap.floor - eps){
     const rch = reachedAt(ST.series, v);
     k.textContent = "Déjà atteint"; k.className = "kicker past";
