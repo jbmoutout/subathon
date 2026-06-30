@@ -142,8 +142,9 @@ const REFRESH_MS = 30000;
 const HORIZON = 21*86400;
 const PIVOT   = 0.32;
 const THUMB   = 26;
-/* secondes ajoutées par don — défauts (règle annoncée), ré-estimés en live depuis /api/events */
-const RATE = { sub:90, tip:120 };
+/* secondes ajoutées par don — défauts (règle annoncée), ré-estimés en live depuis /api/events.
+   tip : non dérivable (≈0 tranche "pur tip" dans le flux) → reste sur ce défaut codé en dur. */
+const RATE = { sub:90, tip:90 };
 const TIP_EUR = 5;   // l'API n'expose que le palier tipeee 5 € (champ tipeee_5) — le montant n'est pas dérivable
 
 function adapt(raw){
@@ -189,15 +190,16 @@ function reachedAt(series, D){
 }
 /* règle vivante : secondes/sub déduites des tranches "pur sub" de /api/events (idem tipeee si isolable) */
 function median(a){ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y); const m=s.length>>1; return s.length%2 ? s[m] : (s[m-1]+s[m])/2; }
+const RATE_WINDOW = 8; // ne médianer que les dernières tranches "pures" -> suit un changement de barème en cours de subathon
 function deriveRates(evs){
   const sub=[], tip=[];
-  for(const b of (evs||[])){
+  for(const b of (evs||[])){                       // /api/events est trié par bucket croissant
     const ns=+b.sub||0, nt=+b.tipeee_5||0, nu=+b.unknown||0, add=+b.added_seconds||0;
     if(add<=0) continue;
     if(ns>0 && nt===0 && nu===0) sub.push(add/ns);
     if(nt>0 && ns===0 && nu===0) tip.push(add/nt);
   }
-  return { sub:median(sub), tip:median(tip) };
+  return { sub:median(sub.slice(-RATE_WINDOW)), tip:median(tip.slice(-RATE_WINDOW)) };
 }
 function fmtRule(sec){ sec=Math.round(sec); const m=Math.floor(sec/60), s=sec%60;
   if(m===0) return `${s}s`;
